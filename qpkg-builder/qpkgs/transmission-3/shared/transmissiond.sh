@@ -6,6 +6,7 @@ export QNAP_QPKG=$QPKG_NAME
 
 
 function start_transmission_daemon {
+    export CURL_CA_BUNDLE="${QPKG_ROOT}/etc/ssl/certs/cacert.pem"
     TRANSMISSION_WEB_HOME=${QPKG_ROOT}/usr/local/share/transmission/web/ ${QPKG_ROOT}/usr/local/bin/transmission-daemon -f -t --blocklist -g ${QPKG_ROOT}/etc/transmission-daemon.d &
 }
 

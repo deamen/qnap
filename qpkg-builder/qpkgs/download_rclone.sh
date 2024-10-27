@@ -10,13 +10,15 @@ trap 'buildah rm $container' EXIT
 
 # Install necessary tools
 buildah run $container -- apk update
-buildah run $container -- apk add --no-cache wget gnupg unzip bind-tools
+buildah run $container -- apk add --no-cache wget gnupg unzip bind-tools imagemagick
 
 # URLs
 RCLONE_KEY_URL="https://rclone.org/KEYS"
 ARM64_URL="https://github.com/rclone/rclone/releases/download/v$RCLONE_VERSION/rclone-v$RCLONE_VERSION-linux-arm64.zip"
 AMD64_URL="https://github.com/rclone/rclone/releases/download/v$RCLONE_VERSION/rclone-v$RCLONE_VERSION-linux-amd64.zip"
 SHA256SUMS_URL="https://github.com/rclone/rclone/releases/download/v$RCLONE_VERSION/SHA256SUMS"
+LOGO_800PX_URL="https://github.com/rclone/rclone/raw/master/graphics/logo/logo_on_light/logo_on_light__vertical_color_800px_2to1.png"
+LOGO_64PX_URL="https://github.com/rclone/rclone/raw/master/graphics/logo/logo_on_light/logo_on_light__vertical_color_64px.png"
 EXPECTED_FINGERPRINT="FBF737ECE9F8AB18604BD2AC93935E02FF3B54FA"
 
 # Download Rclone files
@@ -55,7 +57,14 @@ buildah run $container -- sh -c "
 buildah run $container -- unzip /tmp/rclone-v$RCLONE_VERSION-linux-arm64.zip -d /tmp
 buildah run $container -- unzip /tmp/rclone-v$RCLONE_VERSION-linux-amd64.zip -d /tmp
 
-# Create the copy script to move binaries to arm_64 and x86_64 folders
+# Download and convert logos
+buildah run $container -- wget -P /tmp "$LOGO_800PX_URL"
+buildah run $container -- convert /tmp/logo_on_light__vertical_color_800px_2to1.png -resize 80x80 /tmp/rclone_80.gif
+
+buildah run $container -- wget -P /tmp "$LOGO_64PX_URL"
+buildah run $container -- convert /tmp/logo_on_light__vertical_color_64px.png /tmp/rclone.gif
+
+# Create the copy script to move binaries and logos to their appropriate folders
 copy_script="copy_rclone_binaries.sh"
 cat << 'EOF' > $copy_script
 #!/bin/sh
@@ -63,17 +72,19 @@ container=$1
 OUT_DIR=$2
 
 mnt=$(buildah mount $container)
-mkdir -p "$OUT_DIR/arm_64" "$OUT_DIR/x86_64"
+mkdir -p "$OUT_DIR/arm_64" "$OUT_DIR/x86_64" "$OUT_DIR/icons"
 cp "$mnt/tmp/rclone-v1.68.1-linux-arm64/rclone" "$OUT_DIR/arm_64/"
 cp "$mnt/tmp/rclone-v1.68.1-linux-amd64/rclone" "$OUT_DIR/x86_64/"
+cp "$mnt/tmp/rclone_80.gif" "$OUT_DIR/icons/"
+cp "$mnt/tmp/rclone.gif" "$OUT_DIR/icons/"
 buildah umount $container
 EOF
 chmod a+x $copy_script
 
-# Use buildah unshare to copy the binaries from the container to the host
-echo "Copying the rclone binaries from the builder container to the host..."
+# Use buildah unshare to copy the binaries and logos from the container to the host
+echo "Copying the rclone binaries and logos from the builder container to the host..."
 buildah unshare ./$copy_script "$container" "$OUT_DIR"
 
 # Clean up
 rm -rf "$copy_script"
-echo "Rclone binaries have been copied to $OUT_DIR and verified."
+echo "Rclone binaries and logos have been copied to $OUT_DIR and verified."

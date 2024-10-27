@@ -9,5 +9,5 @@ DOCKER_BUILDKIT=1 docker run -it --rm -v ${PWD}/qpkgs/transmission-3:/SRC qpkg-b
 
 Build the rclone qpkg:
 ```bash
-podman run -it --rm -v ${PWD}/qpkgs/rclone:/SRC:z quay.io/deamen/qpkg-builder
-```
+podman run -it --rm -v ${PWD}/qpkgs/rclone:/SRC:z quay.io/deamen/qpkg-builder --build-arch x86_64 --build-arch arm_64
+```i
